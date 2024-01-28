@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
 
@@ -8,6 +8,15 @@ const ImageUpload = () => {
   const [response, setResponse] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [imageSrc, setImageSrc] = useState(null);
+
+  useEffect(() => {
+    // Load image from local storage on component mount
+    const storedImageSrc = localStorage.getItem("uploadedImageSrc");
+    if (storedImageSrc) {
+      setImageSrc(storedImageSrc);
+    }
+  }, []);
 
   const containerStyle = {
     display: "flex",
@@ -109,8 +118,26 @@ const ImageUpload = () => {
     );
   };
 
-  const handleFileChange = (event) => {
-    setFile(event.target.files[0]);
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+
+    if (selectedFile) {
+      // Convert file to data URL
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const dataUrl = event.target.result;
+
+        // Set the file and image src in state
+        setFile(selectedFile);
+        setImageSrc(dataUrl);
+
+        // Save image src to local storage
+        localStorage.setItem("uploadedImageSrc", dataUrl);
+      };
+
+      reader.readAsDataURL(selectedFile);
+    }
   };
 
   const handleUpload = async () => {
@@ -160,10 +187,8 @@ const ImageUpload = () => {
           onChange={handleFileChange}
           style={fileInputStyle}
         />
+        {imageSrc && <img src={imageSrc} alt="Uploaded" />}
       </div>
-      <Link legacyBehavior href="/">
-        <a style={detectionLinkStyle}>Go to Home</a>
-      </Link>
       <button onClick={handleUpload} style={buttonStyle}>
         Upload
       </button>
@@ -187,13 +212,15 @@ const ImageUpload = () => {
               </tr>
             </thead>
             <tbody>
-              {Object.entries(response.predictions).map(([category, data]) => (
-                <PredictionCategory
-                  key={category}
-                  category={category}
-                  data={data}
-                />
-              ))}
+              {Object.entries(response.predictions || {}).map(
+                ([category, data]) => (
+                  <PredictionCategory
+                    key={category}
+                    category={category}
+                    data={data}
+                  />
+                )
+              )}
             </tbody>
           </table>
         </div>
